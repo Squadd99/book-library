@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oxford Book Library</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 40px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+        .book-card {
+            background-color: #fff;
+            margin: 15px;
+            padding: 20px;
+            width: 220px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .book-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        .book-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        .search-bar, .add-book-form input, .add-book-form textarea {
+            margin: 5px;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: calc(100% - 22px);
+        }
+        .add-book-form button {
+            padding: 10px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+        .add-book-form button:hover {
+            background-color: #4cae4c;
+        }
+        .category-filter {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .details {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            overflow: auto;
+            z-index: 1000;
+        }
+        .details-content {
+            background: #333;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .close {
+            background: red;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Oxford Book Library</h1>
+
+    <div class="category-filter">
+        <label for="category">Select Level Classification:</label>
+        <select id="category" onchange="filterBooks()">
+            <option value="all">All</option>
+            <option value="Level 1">Level 1</option>
+            <option value="Level 2">Level 2</option>
+            <option value="Level 3">Level 3</option>
+        </select>
+    </div>
+
+    <input type="text" id="search" class="search-bar" placeholder="Search for a book..." onkeyup="searchBooks()">
+
+    <div class="container" id="book-list"></div>
+
+    <h2>Add a New Book</h2>
+    <div class="add-book-form">
+        <input type="text" id="title" placeholder="Book Title" required>
+        <input type="text" id="author" placeholder="Author Name" required>
+        <input type="text" id="image" placeholder="Book Image URL" required>
+        <textarea id="description" placeholder="Book Description" required></textarea>
+        <input type="url" id="bookPdf" placeholder="PDF Book Link" required>
+        
+        <label for="level">Select Level Classification:</label>
+        <select id="level">
+            <option value="Level 1">Level 1</option>
+            <option value="Level 2">Level 2</option>
+            <option value="Level 3">Level 3</option>
+        </select>
+        
+        <button onclick="addBook()">Add Book</button>
+        <button onclick="clearBooks()" style="background-color: red; margin-top: 10px;">Clear All Books</button>
+    </div>
+
+    <div class="details" id="detailsModal">
+        <div class="details-content">
+            <button class="close" onclick="closeDetails()">Close</button>
+            <h3 id="detailTitle"></h3>
+            <p id="detailAuthor"></p>
+            <p id="detailDescription"></p>
+            <p id="detailPdf"></p>
+        </div>
+    </div>
+
+    <script>
+        // تغيير خلفية الصفحة بصورة عن طريق JavaScript
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.style.backgroundImage = "url('https://images.unsplash.com/photo-1512820790803-83ca734da794')";
+            document.body.style.backgroundSize = "cover";
+            document.body.style.backgroundRepeat = "no-repeat";
+            document.body.style.backgroundPosition = "center center";
+            document.body.style.backgroundAttachment = "fixed";
+        });
+
+        const defaultBooks = [
+            {
+                title: "White Dwarf",
+                author: "John Doe",
+                image: "https://i0.wp.com/thegrognardfiles.com/wp-content/uploads/2020/07/white-dwarf-43pdf-lskiorg.jpg?fit=443%2C640&ssl=1",
+                description: "A comprehensive guide to the stars.",
+                pdf: "https://www.example.com/white-dwarf.pdf",
+                level: "Level 1"
+            },
+            {
+                title: "The Secret Garden",
+                author: "Frances Hodgson Burnett",
+                image: "https://godine.com/cdn/shop/files/9780879236496.jpg?v=1714163978",
+                description: "A story about a hidden garden and friendship.",
+                pdf: "https://drive.google.com/file/d/1NYIBX1oC74lJX6n_KFFdTQceOXjRYTxv/view?usp=drivesdk",
+                level: "Level 2"
+            },
+            {
+                title: "Virtual Friends",
+                author: "Helen Salter",
+                image: "https://imgv2-1-f.scribdassets.com/img/document/499812218/original/ff316dea11/1?v=1",
+                description: "A story about friendship in a digital age.",
+                pdf: "https://drive.google.com/file/d/17sOwt39CgSFbpk-08hpFR_Fk4Kgl_qzR/view?usp=drivesdk",
+                level: "Level 3"
+            },
+            {
+                title: "The Omega Files",
+                author: "John Doe",
+                image: "https://play-lh.googleusercontent.com/HLHHt4W6G5g6O6rHgoUn5fq7sdyU0wXRNnKeDilXQPSOURTWcHKSne_oFr6YpNLVISlqwrMpZfllQFM",
+                description: "An exploration of mysterious phenomena.",
+                pdf: "https://drive.google.com/file/d/1qURKG2vgZWP4B2B8Uh0G1W945ziqJzpm/view?usp=drivesdk",
+                level: "Level 2"
+            },
+            {
+                title: "The Drive to Dubai",
+                author: "Unknown",
+                image: "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1348944158i/12142058.jpg",
+                description: "An adventurous journey to Dubai.",
+                pdf: "https://drive.google.com/file/d/1rdxic76PDBVHvpVYafP_wWegn7wgKl-_/view?usp=drivesdk",
+                level: "Level 3"
+            },
+            {
+                title: "Christmas Carol",
+                author: "Charles Dickens",
+                image: "https://musicart.xboxlive.com/7/de241200-0000-0000-0000-000000000002/504/image.jpg",
+                description: "A classic tale of redemption.",
+                pdf: "https://drive.google.com/file/d/1-5o2rHR3zhOU03DF9lzqVSaWexTlkwwE/view?usp=drivesdk",
+                level: "Level 1"
+            }
+        ];
+        let books = JSON.parse(localStorage.getItem("books")) || defaultBooks;
+
+        function displayBooks() {
+            const bookList = document.getElementById("book-list");
+            bookList.innerHTML = "";
+            books.forEach((book, index) => {
+                const bookCard = document.createElement("div");
+                bookCard.className = "book-card";
+                bookCard.innerHTML = `
+                    <img src="${book.image}" alt="${book.title}">
+                    <h3>${book.title}</h3>
+                    <p>${book.author}</p>
+                    <p>${book.description.slice(0, 100)}...</p>
+                    <p><strong>Classification:</strong> ${book.level}</p>
+                    <button onclick="showDetails('${book.title}')">View Details</button>
+                    <button onclick="removeBook(${index})" style="background-color: red; color: white; border: none; cursor: pointer; margin-top: 10px;">Remove Book</button>
+                `;
+                bookList.appendChild(bookCard);
+            });
+        }
+
+        function addBook() {
+            const title = document.getElementById("title").value;
+            const author = document.getElementById("author").value;
+            const image = document.getElementById("image").value;
+            const description = document.getElementById("description").value;
+            const pdfLink = document.getElementById("bookPdf").value;
+            const level = document.getElementById("level").value;
+
+            if (title && author && image && description && pdfLink) {
+                books.push({ title, author, image, description, pdf: pdfLink, level });
+                localStorage.setItem("books", JSON.stringify(books));
+                displayBooks();
+                clearForm();
+            }
+        }
+
+        function clearForm() {
+            document.getElementById("title").value = '';
+            document.getElementById("author").value = '';
+            document.getElementById("image").value = '';
+            document.getElementById("description").value = '';
+            document.getElementById("bookPdf").value = '';
+            document.getElementById("level").value = 'Level 1';
+        }
+
+        function showDetails(title) {
+            const book = books.find(b => b.title === title);
+            document.getElementById('detailTitle').innerText = book.title;
+            document.getElementById('detailAuthor').innerText = `Author: ${book.author}`;
+            document.getElementById('detailDescription').innerText = book.description;
+            document.getElementById('detailPdf').innerHTML = `<a href="${book.pdf}" target="_blank" style="color: lightblue;">Download PDF</a>`;
+            document.getElementById('detailsModal').style.display = 'block';
+        }
+
+        function closeDetails() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+
+        function removeBook(index) {
+            books.splice(index, 1);
+            localStorage.setItem("books", JSON.stringify(books));
+            displayBooks();
+        }
+
+        function clearBooks() {
+            books = [];
+            localStorage.removeItem("books");
+            displayBooks();
+        }
+
+        function filterBooks() {
+            const category = document.getElementById("category").value;
+            const filteredBooks = category === "all" ? books : books.filter(book => book.level === category);
+            const bookList = document.getElementById("book-list");
+            bookList.innerHTML = "";
+            filteredBooks.forEach((book, index) => {
+                const bookCard = document.createElement("div");
+                bookCard.className = "book-card";
+                bookCard.innerHTML = `
+                    <img src="${book.image}" alt="${book.title}">
+                    <h3>${book.title}</h3>
+                    <p>${book.author}</p>
+                    <p>${book.description.slice(0, 100)}...</p>
+                    <p><strong>Classification:</strong> ${book.level}</p>
+                    <button onclick="showDetails('${book.title}')">View Details</button>
+                    <button onclick="removeBook(${index})" style="background-color: red; color: white; border: none; cursor: pointer; margin-top: 10px;">Remove Book</button>
+                `;
+                bookList.appendChild(bookCard);
+            });
+        }
+
+        function searchBooks() {
+            const query = document.getElementById("search").value.toLowerCase();
+            const filteredBooks = books.filter(book => book.title.toLowerCase().includes(query));
+            const bookList = document.getElementById("book-list");
+            bookList.innerHTML = "";
+            filteredBooks.forEach((book, index) => {
+                const bookCard = document.createElement("div");
+                bookCard.className = "book-card";
+                bookCard.innerHTML = `
+                    <img src="${book.image}" alt="${book.title}">
+                    <h3>${book.title}</h3>
+                    <p>${book.author}</p>
+                    <p>${book.description.slice(0, 100)}...</p>
+                    <p><strong>Classification:</strong> ${book.level}</p>
+                    <button onclick="showDetails('${book.title}')">View Details</button>
+                    <button onclick="removeBook(${index})" style="background-color: red; color: white; border: none; cursor: pointer; margin-top: 10px;">Remove Book</button>
+                `;
+                bookList.appendChild(bookCard);
+            });
+        }
+
+        displayBooks();
+    </script>
+
+</body>
+</html>
